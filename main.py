@@ -10,9 +10,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+PREFIX = "/story"
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+templates.env.globals["prefix"] = PREFIX  # available in every template as {{ prefix }}
+app.mount(f"{PREFIX}/static", StaticFiles(directory="static"), name="static")
 
 DB_PATH = "story_game.db"
 
@@ -155,16 +158,12 @@ class GameManager:
                 "UPDATE games SET round_start_time = ? WHERE id = ?",
                 (start_time, game_id),
             )
-        # DB closed. Safe for async work.
 
         self.drafts[game_id] = {}
         log(f"start_round: game={game_id} round={current_round} "
             f"players={len(players)} duration={game['round_duration']}s "
             f"connected={list(self.connections.get(game_id, {}).keys())}")
 
-        # Do NOT cancel self.timers[game_id]: if this was called from within the
-        # timer task itself (via end_round), self-cancel raises CancelledError at
-        # the next await, silently killing execution.
         self.timers[game_id] = asyncio.create_task(
             self._round_timer(game_id, game["round_duration"])
         )
@@ -183,10 +182,9 @@ class GameManager:
             })
 
     async def _round_timer(self, game_id: str, duration: int):
-        grace = 3  # seconds between warning and capture
+        grace = 3
         log(f"Timer sleeping {duration}s for game={game_id}")
         await asyncio.sleep(max(0, duration - grace))
-        # Signal clients to flush their textarea immediately
         await self.broadcast(game_id, {"type": "prepare_submit"})
         log(f"prepare_submit sent for game={game_id}, waiting {grace}s")
         await asyncio.sleep(grace)
@@ -202,7 +200,7 @@ class GameManager:
         with get_db() as db:
             game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
             if not game or game["status"] != "active":
-                log(f"end_round: game={game_id} not active (status={game['status'] if game else 'missing'}), skipping")
+                log(f"end_round: game={game_id} not active, skipping")
                 return
             game = dict(game)
             players = [
@@ -249,7 +247,6 @@ class GameManager:
                     (next_round, game_id),
                 )
                 log(f"end_round: game={game_id} advancing to round {next_round}")
-        # DB committed.
 
         if next_round > game["num_rounds"]:
             await self.broadcast(game_id, {"type": "game_complete"})
@@ -270,12 +267,13 @@ async def startup():
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
-@app.get("/", response_class=HTMLResponse)
+@app.get(f"{PREFIX}", response_class=HTMLResponse)
+@app.get(f"{PREFIX}/", response_class=HTMLResponse)
 async def index(request: Request, error: str = ""):
     return templates.TemplateResponse("index.html", {"request": request, "error": error})
 
 
-@app.post("/games/create")
+@app.post(f"{PREFIX}/games/create")
 async def create_game(
     name: str = Form(...),
     title: str = Form(...),
@@ -295,10 +293,10 @@ async def create_game(
         )
         player_id = result.lastrowid
     log(f"Game created: {game_id} by player {player_id} ({name})")
-    return RedirectResponse(f"/lobby/{game_id}?pid={player_id}", status_code=303)
+    return RedirectResponse(f"{PREFIX}/lobby/{game_id}?pid={player_id}", status_code=303)
 
 
-@app.post("/games/join")
+@app.post(f"{PREFIX}/games/join")
 async def join_game(
     game_id: str = Form(...),
     name: str = Form(...),
@@ -307,9 +305,9 @@ async def join_game(
     with get_db() as db:
         game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
         if not game:
-            return RedirectResponse(f"/?error=Game+{game_id}+not+found", status_code=303)
+            return RedirectResponse(f"{PREFIX}/?error=Game+{game_id}+not+found", status_code=303)
         if game["status"] != "waiting":
-            return RedirectResponse(f"/?error=Game+{game_id}+has+already+started", status_code=303)
+            return RedirectResponse(f"{PREFIX}/?error=Game+{game_id}+has+already+started", status_code=303)
         count = db.execute(
             "SELECT COUNT(*) as c FROM players WHERE game_id = ?", (game_id,)
         ).fetchone()["c"]
@@ -319,19 +317,19 @@ async def join_game(
         )
         player_id = result.lastrowid
     log(f"Player joined: {name} (id={player_id}) game={game_id}")
-    return RedirectResponse(f"/lobby/{game_id}?pid={player_id}", status_code=303)
+    return RedirectResponse(f"{PREFIX}/lobby/{game_id}?pid={player_id}", status_code=303)
 
 
-@app.get("/lobby/{game_id}", response_class=HTMLResponse)
+@app.get(f"{PREFIX}/lobby/{{game_id}}", response_class=HTMLResponse)
 async def lobby(request: Request, game_id: str, pid: int):
     with get_db() as db:
         game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
         if not game:
             raise HTTPException(status_code=404, detail="Game not found")
         if game["status"] == "active":
-            return RedirectResponse(f"/game/{game_id}?pid={pid}")
+            return RedirectResponse(f"{PREFIX}/game/{game_id}?pid={pid}")
         if game["status"] == "complete":
-            return RedirectResponse(f"/story/{game_id}?pid={pid}")
+            return RedirectResponse(f"{PREFIX}/final/{game_id}?pid={pid}")
         players = db.execute(
             "SELECT * FROM players WHERE game_id = ? ORDER BY seat", (game_id,)
         ).fetchall()
@@ -348,7 +346,7 @@ async def lobby(request: Request, game_id: str, pid: int):
     )
 
 
-@app.post("/games/{game_id}/start")
+@app.post(f"{PREFIX}/games/{{game_id}}/start")
 async def start_game(game_id: str, pid: int = Form(...)):
     with get_db() as db:
         game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
@@ -362,10 +360,10 @@ async def start_game(game_id: str, pid: int = Form(...)):
         ).fetchone()["c"]
         if n_players < 2:
             return RedirectResponse(
-                f"/lobby/{game_id}?pid={pid}&error=Need+at+least+2+players",
+                f"{PREFIX}/lobby/{game_id}?pid={pid}&error=Need+at+least+2+players",
                 status_code=303,
             )
-        # Randomise which part each player starts on
+
         all_players = db.execute(
             "SELECT id FROM players WHERE game_id = ? ORDER BY id", (game_id,)
         ).fetchall()
@@ -380,17 +378,16 @@ async def start_game(game_id: str, pid: int = Form(...)):
         )
     log(f"Game starting: {game_id} with {n_players} players")
     await manager.start_round(game_id)
-    return RedirectResponse(f"/game/{game_id}?pid={pid}", status_code=303)
+    return RedirectResponse(f"{PREFIX}/game/{game_id}?pid={pid}", status_code=303)
 
 
-@app.post("/games/{game_id}/draft")
+@app.post(f"{PREFIX}/games/{{game_id}}/draft")
 async def save_draft(game_id: str, pid: int = Form(...), text: str = Form(...)):
-    """HTTP fallback for draft saving — called periodically from the game page."""
     manager.set_draft(game_id, pid, text)
     return JSONResponse({"ok": True})
 
 
-@app.get("/api/game/{game_id}/state")
+@app.get(f"{PREFIX}/api/game/{{game_id}}/state")
 async def game_state(game_id: str):
     with get_db() as db:
         game = db.execute(
@@ -407,16 +404,16 @@ async def game_state(game_id: str):
     })
 
 
-@app.get("/game/{game_id}", response_class=HTMLResponse)
+@app.get(f"{PREFIX}/game/{{game_id}}", response_class=HTMLResponse)
 async def game_page(request: Request, game_id: str, pid: int):
     with get_db() as db:
         game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
         if not game:
             raise HTTPException(status_code=404)
         if game["status"] == "complete":
-            return RedirectResponse(f"/story/{game_id}?pid={pid}")
+            return RedirectResponse(f"{PREFIX}/final/{game_id}?pid={pid}")
         if game["status"] == "waiting":
-            return RedirectResponse(f"/lobby/{game_id}?pid={pid}")
+            return RedirectResponse(f"{PREFIX}/lobby/{game_id}?pid={pid}")
 
         players = db.execute(
             "SELECT * FROM players WHERE game_id = ? ORDER BY seat", (game_id,)
@@ -469,8 +466,8 @@ async def game_page(request: Request, game_id: str, pid: int):
     )
 
 
-@app.get("/story/{game_id}", response_class=HTMLResponse)
-async def story_page(request: Request, game_id: str, pid: int):
+@app.get(f"{PREFIX}/final/{{game_id}}", response_class=HTMLResponse)
+async def final_page(request: Request, game_id: str, pid: int):
     with get_db() as db:
         game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
         if not game:
@@ -500,7 +497,7 @@ async def story_page(request: Request, game_id: str, pid: int):
     )
 
 
-@app.get("/history/{game_id}", response_class=HTMLResponse)
+@app.get(f"{PREFIX}/history/{{game_id}}", response_class=HTMLResponse)
 async def history_page(request: Request, game_id: str, pid: int):
     with get_db() as db:
         game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
@@ -519,7 +516,6 @@ async def history_page(request: Request, game_id: str, pid: int):
         ).fetchall()
         num_rounds = game["num_rounds"]
 
-    # grid[part_number][round_num] = {text, name}
     grid: dict[int, dict[int, dict]] = {}
     for row in rows:
         grid.setdefault(row["part_number"], {})[row["round_num"]] = {
@@ -543,7 +539,7 @@ async def history_page(request: Request, game_id: str, pid: int):
 
 # ── WebSocket ──────────────────────────────────────────────────────────────────
 
-@app.websocket("/ws/{game_id}/{player_id}")
+@app.websocket(f"{PREFIX}/ws/{{game_id}}/{{player_id}}")
 async def websocket_endpoint(ws: WebSocket, game_id: str, player_id: int):
     await manager.connect(game_id, player_id, ws)
 
@@ -559,8 +555,7 @@ async def websocket_endpoint(ws: WebSocket, game_id: str, player_id: int):
     try:
         while True:
             data = await ws.receive_json()
-            msg_type = data.get("type", "")
-            if msg_type == "draft":
+            if data.get("type") == "draft":
                 manager.set_draft(game_id, player_id, data.get("text", ""))
     except WebSocketDisconnect:
         manager.disconnect(game_id, player_id)
