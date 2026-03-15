@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ game.title }} — Round {{ game.current_round }}{% endblock %}
+{% block content %}
+
+<div class="game-page">
+
+  <header class="game-header sticky">
+    <div class="header-left">
+      <h1>{{ game.title }}</h1>
+      <p class="description">{{ game.description }}</p>
+    </div>
+    <div class="header-right">
+      <div class="round-label">Round {{ game.current_round }} / {{ game.num_rounds }}</div>
+      <div class="timer" id="timer">—:——</div>
+    </div>
+  </header>
+
+  <div class="parts-container">
+    {% for i in range(n) %}
+    {% set label = part_label(i, n) %}
+
+    {% if i == current_part %}
+    {# ── Current part: editable textarea ── #}
+    <div class="part-card current-part" id="part-{{ i }}">
+      <div class="part-header">
+        <span class="part-label">{{ label }}</span>
+        <span class="editing-badge">editing now</span>
+      </div>
+      <textarea
+        id="text-input"
+        class="part-textarea"
+        rows="10"
+        placeholder="Write your contribution here…">{{ text_to_edit }}</textarea>
+    </div>
+
+    {% elif i in parts_seen %}
+    {# ── Parts this player has previously edited ── #}
+    <div class="part-card seen-part" id="part-{{ i }}">
+      <div class="part-header">
+        <span class="part-label">{{ label }}</span>
+        <span class="seen-badge">edited in round {{ parts_seen[i].round_num }}</span>
+      </div>
+      <div class="part-columns">
+        <div class="part-col">
+          <div class="col-label">What you submitted</div>
+          <div class="part-text">{{ parts_seen[i].text_submitted or '(nothing submitted)' }}</div>
+        </div>
+        <div class="part-col">
+          <div class="col-label">What you received</div>
+          <div class="part-text muted">{{ parts_seen[i].text_received or '(blank — first write)' }}</div>
+        </div>
+      </div>
+    </div>
+
+    {% else %}
+    {# ── Parts not yet seen ── #}
+    <div class="part-card unseen-part" id="part-{{ i }}">
+      <div class="part-header">
+        <span class="part-label">{{ label }}</span>
+      </div>
+      <div class="part-text muted">—</div>
+    </div>
+
+    {% endif %}
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+  const gameId = {{ game.id | tojson }};
+  const playerId = {{ player.id }};
+  const serverStartTime = {{ start_time }};
+  const duration = {{ game.round_duration }};
+
+  // ── Countdown timer ──────────────────────────────────────────────────────
+  const timerEl = document.getElementById('timer');
+
+  function updateTimer() {
+    const elapsed = Date.now() / 1000 - serverStartTime;
+    const remaining = Math.max(0, duration - elapsed);
+    const mins = Math.floor(remaining / 60);
+    const secs = Math.floor(remaining % 60);
+    timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    timerEl.classList.toggle('timer-urgent', remaining < 30);
+    if (remaining > 0) requestAnimationFrame(updateTimer);
+  }
+  updateTimer();
+
+  // ── Draft saving via HTTP POST (reliable, no WebSocket dependency) ──────────
+  const textarea = document.getElementById('text-input');
+
+  async function sendDraft() {
+    const body = new FormData();
+    body.append('pid', playerId);
+    body.append('text', textarea.value);
+    try {
+      await fetch(`/games/${gameId}/draft`, { method: 'POST', body });
+    } catch (e) {
+      console.warn('Draft save failed:', e);
+    }
+  }
+
+  let draftTimer = null;
+  textarea.addEventListener('input', () => {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(sendDraft, 2000);
+  });
+  // Periodic save — belt-and-suspenders
+  setInterval(sendDraft, 5000);
+
+  // ── WebSocket — used only for push notifications from server ─────────────────
+  const ws = new WebSocket(`ws://${location.host}/ws/${gameId}/${playerId}`);
+
+  ws.onopen  = () => console.log('[WS] connected');
+  ws.onerror = (e) => console.error('[WS] error', e);
+  ws.onclose = (e) => console.log('[WS] closed', e.code, e.reason);
+
+  ws.onmessage = (event) => {
+    console.log('[WS] received:', event.data.slice(0, 80));
+    const data = JSON.parse(event.data);
+    if (data.type === 'prepare_submit') {
+      // Server is about to end the round — flush immediately
+      sendDraft();
+    } else if (data.type === 'round_start') {
+      sendDraft().then(() => window.location.reload());
+    } else if (data.type === 'game_complete') {
+      sendDraft().then(() => {
+        window.location.href = `/story/${gameId}?pid=${playerId}`;
+      });
+    }
+  };
+
+  // ── Polling fallback — catches round changes even if WS message was missed ───
+  const knownRound = {{ game.current_round }};
+  setInterval(async () => {
+    try {
+      const r = await fetch(`/api/game/${gameId}/state`);
+      const state = await r.json();
+      if (state.status === 'complete') {
+        window.location.href = `/story/${gameId}?pid=${playerId}`;
+      } else if (state.current_round !== knownRound) {
+        await sendDraft();
+        window.location.reload();
+      }
+    } catch {}
+  }, 4000);
+
+  // Scroll the current part into view on load
+  document.getElementById('part-{{ current_part }}').scrollIntoView({ behavior: 'smooth', block: 'center' });
+</script>
+
+{% endblock %}

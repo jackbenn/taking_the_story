@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Lobby — {{ game.id }}{% endblock %}
+{% block content %}
+
+<div class="lobby-page">
+  <div class="game-header">
+    <h1>{{ game.title }}</h1>
+    <p class="description">{{ game.description }}</p>
+  </div>
+
+  <div class="lobby-body">
+    <div class="card lobby-card">
+      <h2>Waiting for players</h2>
+      <p class="game-code-label">Share this code:</p>
+      <div class="game-code">{{ game.id }}</div>
+
+      <h3>Players joined</h3>
+      <ul id="player-list" class="player-list">
+        {% for p in players %}
+        <li>{{ p.name }}{% if p.seat == 0 %} <span class="tag">host</span>{% endif %}</li>
+        {% endfor %}
+      </ul>
+
+      {% if is_host %}
+      <form method="post" action="/games/{{ game.id }}/start" id="start-form">
+        <input type="hidden" name="pid" value="{{ player.id }}">
+        <button type="submit" class="btn-primary" id="start-btn">Start Game</button>
+      </form>
+      <p class="hint">Game will have {{ players | length }} part(s) — one per player.
+        {{ game.num_rounds }} turns, {{ game.round_duration }}s each.</p>
+      {% else %}
+      <p class="waiting-msg">Waiting for <strong>{{ players[0].name }}</strong> to start the game…</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  const gameId = {{ game.id | tojson }};
+  const playerId = {{ player.id }};
+  const isHost = {{ 'true' if is_host else 'false' }};
+
+  const ws = new WebSocket(`ws://${location.host}/ws/${gameId}/${playerId}`);
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'lobby_update') {
+      const list = document.getElementById('player-list');
+      list.innerHTML = data.players.map(p =>
+        `<li>${p.name}${p.seat === 0 ? ' <span class="tag">host</span>' : ''}</li>`
+      ).join('');
+    } else if (data.type === 'round_start') {
+      window.location.href = `/game/${gameId}?pid=${playerId}`;
+    } else if (data.type === 'game_complete') {
+      window.location.href = `/story/${gameId}?pid=${playerId}`;
+    }
+  };
+
+  // Polling fallback in case WebSocket message was missed
+  setInterval(async () => {
+    try {
+      const r = await fetch(`/api/game/${gameId}/state`);
+      const { status } = await r.json();
+      if (status === 'active') window.location.href = `/game/${gameId}?pid=${playerId}`;
+      if (status === 'complete') window.location.href = `/story/${gameId}?pid=${playerId}`;
+    } catch {}
+  }, 4000);
+</script>
+
+{% endblock %}

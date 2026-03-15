@@ -1,0 +1,571 @@
+/* ── Reset & base ──────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --border: #e0ddd8;
+  --text: #2c2b28;
+  --muted: #888580;
+  --accent: #4a6fa5;
+  --accent-dark: #3a5a8a;
+  --current: #eef2f8;
+  --current-border: #4a6fa5;
+  --seen: #f9f9f7;
+  --unseen: #fafaf8;
+  --urgent: #c0392b;
+  --radius: 8px;
+  --font: 'Georgia', serif;
+  --font-ui: system-ui, -apple-system, sans-serif;
+}
+
+html { font-size: 16px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.page { min-height: 100vh; }
+
+h1, h2, h3 { font-family: var(--font); font-weight: normal; }
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.3rem; margin-bottom: 1rem; }
+h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+
+input, textarea, button {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+}
+
+a { color: var(--accent); }
+
+/* ── Forms ─────────────────────────────────────────────────────────────────── */
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.9rem;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+textarea { resize: vertical; }
+
+.field-row {
+  display: flex;
+  gap: 1rem;
+}
+.field-row label { flex: 1; }
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+
+.btn-primary, .btn-secondary {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  width: 100%;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+.btn-primary:hover { background: var(--accent-dark); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+}
+.btn-secondary:hover { background: var(--current); }
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+}
+
+/* ── Index page ────────────────────────────────────────────────────────────── */
+
+.center-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.site-title {
+  text-align: center;
+  font-size: 2.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.site-subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 2.5rem;
+}
+
+.error-banner {
+  background: #fdecea;
+  border: 1px solid #e0a0a0;
+  color: #8b2020;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+}
+
+.card-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.card-row .card { flex: 1; }
+
+.divider {
+  font-family: var(--font-ui);
+  color: var(--muted);
+  padding: 1rem 0;
+  align-self: center;
+}
+
+/* ── Lobby page ────────────────────────────────────────────────────────────── */
+
+.lobby-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.lobby-card {
+  margin-top: 1.5rem;
+}
+
+.game-code-label {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.game-code {
+  font-family: monospace;
+  font-size: 2.2rem;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+}
+
+.player-list {
+  list-style: none;
+  margin-bottom: 1.5rem;
+}
+
+.player-list li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--current);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.hint {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+.waiting-msg {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* ── Game header ───────────────────────────────────────────────────────────── */
+
+.game-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.game-header.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.game-header h1 { font-size: 1.4rem; }
+
+.game-header .description {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+  max-width: 60ch;
+}
+
+.header-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.round-label {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.timer {
+  font-family: monospace;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--accent);
+  transition: color 0.3s;
+}
+
+.timer-urgent {
+  color: var(--urgent);
+}
+
+/* ── Parts container ───────────────────────────────────────────────────────── */
+
+.parts-container {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Part cards ────────────────────────────────────────────────────────────── */
+
+.part-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  background: var(--surface);
+}
+
+.part-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.part-label {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.editing-badge {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--accent);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.seen-badge {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.current-part {
+  background: var(--current);
+  border-color: var(--current-border);
+}
+
+.seen-part {
+  background: var(--seen);
+}
+
+.unseen-part {
+  background: var(--unseen);
+  opacity: 0.7;
+}
+
+.part-textarea {
+  width: 100%;
+  min-height: 200px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+.part-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.part-text {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.muted { color: var(--muted); font-style: italic; }
+
+/* ── Two-column history layout (seen parts) ─────────────────────────────── */
+
+.part-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.col-label {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+/* ── Story page ────────────────────────────────────────────────────────────── */
+
+.story-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.story-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.story-header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+.story-header .description {
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+
+.story-complete-badge {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.story-body { margin-bottom: 2.5rem; }
+
+.story-part {
+  margin-bottom: 1.5rem;
+}
+
+.story-part-label {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.story-text {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.story-divider {
+  text-align: center;
+  color: var(--muted);
+  font-size: 1.1rem;
+  margin: 1.5rem 0;
+}
+
+.story-footer {
+  text-align: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* ── History page ──────────────────────────────────────────────────────────── */
+
+.history-page {
+  padding: 2.5rem 1.5rem;
+}
+
+.history-scroll-wrapper {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.history-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.history-table th,
+.history-table td {
+  border: 1px solid var(--border);
+  padding: 0;
+  vertical-align: top;
+}
+
+.history-part-col {
+  width: 6rem;
+  min-width: 6rem;
+}
+
+.history-round-col {
+  min-width: 220px;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 0.6rem 0.75rem;
+  text-align: center;
+}
+
+.history-part-label {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 0.75rem;
+  text-align: right;
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.history-cell {
+  padding: 0.75rem;
+  background: var(--surface);
+}
+
+.history-cell-missing {
+  color: var(--muted);
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+.history-text {
+  font-family: var(--font);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-bottom: 0.4rem;
+}
+
+.history-author {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: right;
+  font-style: italic;
+}
+
+/* ── Game lobby within game header ─────────────────────────────────────────── */
+
+.game-header .description { font-style: italic; }
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .card-row { flex-direction: column; }
+  .divider { text-align: center; }
+  .game-header { flex-direction: column; }
+  .header-right { text-align: left; }
+  .part-columns { grid-template-columns: 1fr; }
+}

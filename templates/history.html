@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ game.title }} — Full History{% endblock %}
+{% block content %}
+
+<div class="history-page">
+
+  <div class="story-header">
+    <h1>{{ game.title }}</h1>
+    <p class="description">{{ game.description }}</p>
+    <div class="story-complete-badge">
+      Edit history — {{ n }} parts, {{ num_rounds }} rounds
+    </div>
+  </div>
+
+  <div class="history-scroll-wrapper">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th class="history-part-col"></th>
+          {% for r in range(1, num_rounds + 1) %}
+          <th class="history-round-col">Round {{ r }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in range(n) %}
+        <tr>
+          <td class="history-part-label">{{ part_label(p, n) }}</td>
+          {% for r in range(1, num_rounds + 1) %}
+            {% if p in grid and r in grid[p] %}
+            <td class="history-cell">
+              <div class="history-text">{{ grid[p][r].text or '(empty)' }}</div>
+              <div class="history-author">{{ grid[p][r].name }}</div>
+            </td>
+            {% else %}
+            <td class="history-cell history-cell-missing">—</td>
+            {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="story-footer">
+    <a href="/story/{{ game.id }}?pid={{ pid }}" class="btn-secondary">← Back to story</a>
+    <a href="/" class="btn-secondary">Play again</a>
+  </div>
+
+</div>
+
+{% endblock %}

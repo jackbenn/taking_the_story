@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Taking the Story{% endblock %}
+{% block content %}
+
+<div class="center-page">
+  <h1 class="site-title">Taking the Story</h1>
+  <p class="site-subtitle">A collaborative storytelling game</p>
+
+  {% if error %}
+  <div class="error-banner">{{ error }}</div>
+  {% endif %}
+
+  <div class="card-row">
+
+    <div class="card">
+      <h2>Create a Game</h2>
+      <form method="post" action="/games/create">
+        <label>Your name
+          <input type="text" name="name" required autofocus placeholder="e.g. Alice">
+        </label>
+        <label>Story title
+          <input type="text" name="title" required placeholder="e.g. The Mysterious Island">
+        </label>
+        <label>Description
+          <textarea name="description" required rows="4"
+            placeholder="Characters, setting, genre — anything that sets the scene for players"></textarea>
+        </label>
+        <div class="field-row">
+          <label>Number of turns
+            <input type="number" name="num_rounds" value="6" min="1" max="50" required>
+          </label>
+          <label>Seconds per turn
+            <input type="number" name="round_duration" value="120" min="10" max="600" required>
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">Create Game</button>
+      </form>
+    </div>
+
+    <div class="divider">or</div>
+
+    <div class="card">
+      <h2>Join a Game</h2>
+      <form method="post" action="/games/join">
+        <label>Game code
+          <input type="text" name="game_id" required placeholder="e.g. ABCDEF"
+            style="text-transform:uppercase" maxlength="6">
+        </label>
+        <label>Your name
+          <input type="text" name="name" required placeholder="e.g. Bob">
+        </label>
+        <button type="submit" class="btn-secondary">Join Game</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
