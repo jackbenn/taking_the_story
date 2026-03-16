@@ -22,6 +22,12 @@ DB_PATH = "story_game.db"
 
 # ── Database ───────────────────────────────────────────────────────────────────
 
+def calc_part(seat: int, current_round: int, n: int, reverse_order: int) -> int:
+    if reverse_order:
+        return (seat - current_round + 1) % n
+    return (seat + current_round - 1) % n
+
+
 def init_db():
     with get_db() as db:
         db.executescript("""
@@ -33,7 +39,8 @@ def init_db():
                 num_rounds INTEGER NOT NULL,
                 round_duration INTEGER NOT NULL,
                 current_round INTEGER NOT NULL DEFAULT 0,
-                round_start_time REAL
+                round_start_time REAL,
+                reverse_order INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS players (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,6 +58,12 @@ def init_db():
                 text_submitted TEXT NOT NULL DEFAULT ''
             );
         """)
+    # Migration for existing databases
+    with get_db() as db:
+        try:
+            db.execute("ALTER TABLE games ADD COLUMN reverse_order INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 @contextmanager
@@ -141,7 +154,7 @@ class GameManager:
 
             player_payloads = []
             for player in players:
-                part_number = (player["seat"] + current_round - 1) % n
+                part_number = calc_part(player["seat"], current_round, n, game["reverse_order"])
                 prev = db.execute(
                     """SELECT text_submitted FROM entries
                        WHERE game_id = ? AND part_number = ? AND round_num < ?
@@ -216,7 +229,7 @@ class GameManager:
 
             for player in players:
                 seat = player["seat"]
-                part_number = (seat + current_round - 1) % n
+                part_number = calc_part(seat, current_round, n, game["reverse_order"])
 
                 prev = db.execute(
                     """SELECT text_submitted FROM entries
@@ -280,12 +293,14 @@ async def create_game(
     description: str = Form(...),
     num_rounds: int = Form(...),
     round_duration: int = Form(120),
+    reverse_order: str = Form(""),
 ):
     game_id = make_code()
+    rev = 1 if reverse_order else 0
     with get_db() as db:
         db.execute(
-            "INSERT INTO games (id, title, description, num_rounds, round_duration) VALUES (?, ?, ?, ?, ?)",
-            (game_id, title, description, num_rounds, round_duration),
+            "INSERT INTO games (id, title, description, num_rounds, round_duration, reverse_order) VALUES (?, ?, ?, ?, ?, ?)",
+            (game_id, title, description, num_rounds, round_duration, rev),
         )
         result = db.execute(
             "INSERT INTO players (game_id, name, seat) VALUES (?, ?, 0)",
@@ -425,7 +440,7 @@ async def game_page(request: Request, game_id: str, pid: int):
         n = len(players)
         current_round = game["current_round"]
         seat = player["seat"]
-        current_part = (seat + current_round - 1) % n
+        current_part = calc_part(seat, current_round, n, game["reverse_order"])
 
         prev = db.execute(
             """SELECT text_submitted FROM entries
