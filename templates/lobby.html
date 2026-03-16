@@ -22,7 +22,7 @@
       </ul>
 
       {% if is_host %}
-      <form method="post" action="/games/{{ game.id }}/start" id="start-form">
+      <form method="post" action="{{ prefix }}/games/{{ game.id }}/start" id="start-form">
         <input type="hidden" name="pid" value="{{ player.id }}">
         <button type="submit" class="btn-primary" id="start-btn">Start Game</button>
       </form>
@@ -40,7 +40,8 @@
   const playerId = {{ player.id }};
   const isHost = {{ 'true' if is_host else 'false' }};
 
-  const ws = new WebSocket(`ws://${location.host}/ws/${gameId}/${playerId}`);
+  const pfx = {{ prefix | tojson }};
+  const ws = new WebSocket(`ws://${location.host}${pfx}/ws/${gameId}/${playerId}`);
 
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -50,19 +51,19 @@
         `<li>${p.name}${p.seat === 0 ? ' <span class="tag">host</span>' : ''}</li>`
       ).join('');
     } else if (data.type === 'round_start') {
-      window.location.href = `/game/${gameId}?pid=${playerId}`;
+      window.location.href = `${pfx}/game/${gameId}?pid=${playerId}`;
     } else if (data.type === 'game_complete') {
-      window.location.href = `/story/${gameId}?pid=${playerId}`;
+      window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
     }
   };
 
   // Polling fallback in case WebSocket message was missed
   setInterval(async () => {
     try {
-      const r = await fetch(`/api/game/${gameId}/state`);
+      const r = await fetch(`${pfx}/api/game/${gameId}/state`);
       const { status } = await r.json();
-      if (status === 'active') window.location.href = `/game/${gameId}?pid=${playerId}`;
-      if (status === 'complete') window.location.href = `/story/${gameId}?pid=${playerId}`;
+      if (status === 'active') window.location.href = `${pfx}/game/${gameId}?pid=${playerId}`;
+      if (status === 'complete') window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
     } catch {}
   }, 4000);
 </script>

@@ -14,7 +14,7 @@
 
     <div class="card">
       <h2>Create a Game</h2>
-      <form method="post" action="/games/create">
+      <form method="post" action="{{ prefix }}/games/create">
         <label>Your name
           <input type="text" name="name" required autofocus placeholder="e.g. Alice">
         </label>
@@ -41,7 +41,7 @@
 
     <div class="card">
       <h2>Join a Game</h2>
-      <form method="post" action="/games/join">
+      <form method="post" action="{{ prefix }}/games/join">
         <label>Game code
           <input type="text" name="game_id" required placeholder="e.g. ABCDEF"
             style="text-transform:uppercase" maxlength="6">

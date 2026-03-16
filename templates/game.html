@@ -87,6 +87,8 @@
   }
   updateTimer();
 
+  const pfx = {{ prefix | tojson }};
+
   // ── Draft saving via HTTP POST (reliable, no WebSocket dependency) ──────────
   const textarea = document.getElementById('text-input');
 
@@ -95,7 +97,7 @@
     body.append('pid', playerId);
     body.append('text', textarea.value);
     try {
-      await fetch(`/games/${gameId}/draft`, { method: 'POST', body });
+      await fetch(`${pfx}/games/${gameId}/draft`, { method: 'POST', body });
     } catch (e) {
       console.warn('Draft save failed:', e);
     }
@@ -110,7 +112,7 @@
   setInterval(sendDraft, 5000);
 
   // ── WebSocket — used only for push notifications from server ─────────────────
-  const ws = new WebSocket(`ws://${location.host}/ws/${gameId}/${playerId}`);
+  const ws = new WebSocket(`ws://${location.host}${pfx}/ws/${gameId}/${playerId}`);
 
   ws.onopen  = () => console.log('[WS] connected');
   ws.onerror = (e) => console.error('[WS] error', e);
@@ -126,7 +128,7 @@
       sendDraft().then(() => window.location.reload());
     } else if (data.type === 'game_complete') {
       sendDraft().then(() => {
-        window.location.href = `/story/${gameId}?pid=${playerId}`;
+        window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
       });
     }
   };
@@ -135,10 +137,10 @@
   const knownRound = {{ game.current_round }};
   setInterval(async () => {
     try {
-      const r = await fetch(`/api/game/${gameId}/state`);
+      const r = await fetch(`${pfx}/api/game/${gameId}/state`);
       const state = await r.json();
       if (state.status === 'complete') {
-        window.location.href = `/story/${gameId}?pid=${playerId}`;
+        window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
       } else if (state.current_round !== knownRound) {
         await sendDraft();
         window.location.reload();
