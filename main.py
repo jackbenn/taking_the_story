@@ -286,6 +286,11 @@ async def index(request: Request, error: str = ""):
     return templates.TemplateResponse("index.html", {"request": request, "error": error})
 
 
+@app.get(f"{PREFIX}/how-to-play", response_class=HTMLResponse)
+async def how_to_play(request: Request):
+    return templates.TemplateResponse("how_to_play.html", {"request": request})
+
+
 @app.post(f"{PREFIX}/games/create")
 async def create_game(
     name: str = Form(...),

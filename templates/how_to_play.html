@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}How to Play — Taking the Story{% endblock %}
+{% block content %}
+
+<div class="center-page" style="max-width:640px;">
+
+  <h1 class="site-title">How to Play</h1>
+  <p class="site-subtitle">Taking the Story — a collaborative storytelling game</p>
+
+  <div class="card" style="margin-bottom:2rem;">
+    <p style="margin-bottom:1rem;">
+      In Taking the Story, any number of players create a story together, each writing
+      part of it and then editing each other's parts to bring it into a single,
+      cohesive whole.
+    </p>
+    <p style="margin-bottom:1rem;">
+      In the first round, each player is assigned a part and given a limited amount of
+      time to draft it, guided only by the title and description provided by the host
+      and their assigned position in the story — so the player assigned part one should
+      write an introduction. Players should not discuss the story while writing; they
+      each use their own imagination.
+    </p>
+    <p style="margin-bottom:1rem;">
+      In each subsequent round, players move to the next part of the story and take on
+      the role of a patient editor for a writer with great ideas but a poor grasp of
+      continuity (understandable, since the other player had no idea what they wrote).
+      Expand it, clean it up, and help it fit with what comes before and after.
+      "I like where you're taking the story, but…"
+    </p>
+    <p>
+      Players rotate through all the parts, eventually returning to where they started.
+      After a set number of rounds, the finished story is revealed to everyone.
+    </p>
+  </div>
+
+  <div style="text-align:center;">
+    <a href="{{ prefix }}/" class="btn-primary" style="width:auto; display:inline-block;">Play now</a>
+  </div>
+
+</div>
+
+{% endblock %}
