@@ -111,8 +111,24 @@
   // Periodic save — belt-and-suspenders
   setInterval(sendDraft, 5000);
 
+  // ── Polling fallback — catches round changes even if WS message was missed ───
+  // Set up before the socket, so a socket that cannot connect does not stop it.
+  const knownRound = {{ game.current_round }};
+  setInterval(async () => {
+    try {
+      const r = await fetch(`${pfx}/api/game/${gameId}/state`);
+      const state = await r.json();
+      if (state.status === 'complete') {
+        window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
+      } else if (state.current_round !== knownRound) {
+        await sendDraft();
+        window.location.reload();
+      }
+    } catch {}
+  }, 4000);
+
   // ── WebSocket — used only for push notifications from server ─────────────────
-  const ws = new WebSocket(`ws://${location.host}${pfx}/ws/${gameId}/${playerId}`);
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${pfx}/ws/${gameId}/${playerId}`);
 
   ws.onopen  = () => console.log('[WS] connected');
   ws.onerror = (e) => console.error('[WS] error', e);
@@ -132,21 +148,6 @@
       });
     }
   };
-
-  // ── Polling fallback — catches round changes even if WS message was missed ───
-  const knownRound = {{ game.current_round }};
-  setInterval(async () => {
-    try {
-      const r = await fetch(`${pfx}/api/game/${gameId}/state`);
-      const state = await r.json();
-      if (state.status === 'complete') {
-        window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
-      } else if (state.current_round !== knownRound) {
-        await sendDraft();
-        window.location.reload();
-      }
-    } catch {}
-  }, 4000);
 
   // Scroll the current part into view on load
   document.getElementById('part-{{ current_part }}').scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -41,7 +41,18 @@
   const isHost = {{ 'true' if is_host else 'false' }};
 
   const pfx = {{ prefix | tojson }};
-  const ws = new WebSocket(`ws://${location.host}${pfx}/ws/${gameId}/${playerId}`);
+  // Polling fallback in case a WebSocket message was missed. Set up before the
+  // socket, so a socket that cannot connect does not stop it.
+  setInterval(async () => {
+    try {
+      const r = await fetch(`${pfx}/api/game/${gameId}/state`);
+      const { status } = await r.json();
+      if (status === 'active') window.location.href = `${pfx}/game/${gameId}?pid=${playerId}`;
+      if (status === 'complete') window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
+    } catch {}
+  }, 4000);
+
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${pfx}/ws/${gameId}/${playerId}`);
 
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -56,16 +67,6 @@
       window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
     }
   };
-
-  // Polling fallback in case WebSocket message was missed
-  setInterval(async () => {
-    try {
-      const r = await fetch(`${pfx}/api/game/${gameId}/state`);
-      const { status } = await r.json();
-      if (status === 'active') window.location.href = `${pfx}/game/${gameId}?pid=${playerId}`;
-      if (status === 'complete') window.location.href = `${pfx}/final/${gameId}?pid=${playerId}`;
-    } catch {}
-  }, 4000);
 </script>
 
 {% endblock %}

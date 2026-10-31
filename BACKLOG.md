@@ -4,7 +4,7 @@ Prefix: STORY · Next ID: 3 · Schema: v1
 
 ## [STORY-1] WebSocket URL is hardcoded as `ws://`, so other players stay in the lobby on https
 
-- **Status:** idea
+- **Status:** active
 - **Priority:** P1
 - **Size:** quick
 - **Depends on:** none
